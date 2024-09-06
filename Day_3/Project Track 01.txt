@@ -1,0 +1,9 @@
+1. Set up the directories of the project and added files in them
+2. Set up mongodb connection function in driver.go
+3. Set up config.go for returning a struct that maintains error, info logging as well as validating the contents of any struct
+3. Set up dbcol.go for returning specified collection in the specified db
+4. Set up query.go to include a struct for has access of both the app tools defined in config.go and mongo.Client. We will define controllers as methods of this struct
+5. Set up DBRepo.go to include an interface for listing out the functions that we will define in query.go. In this way, the struct defined in 4 will become a type of this interface
+6. Modified main.go to call the driver's connection function
+7. Defined Routes function in routes.go to accept the gin Engine(gin.New in our case) and the mongo.Client returned after successful establishment of the connection and return 
+8. Prepared handlers to handle the controllers(that will be called in routes.go)

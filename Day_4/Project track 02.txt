@@ -1,0 +1,11 @@
+1. Set up Hashing and Verification functions in encrypt.go
+2. Set up signup route :-
+2.a) in query.go, set up InsertUser function
+2.b) in DBRepo interface, included the InsertUser function
+2.c) in handler.go, set up the sign up function
+3. Set up auth.go for jwt generation and parsing
+4. Set up signin route :-
+4.a) in query.go, set up, VerifyUser(for email verification) and UpdateUser(for updating/initialising the jwt token) method
+4.b) in DBRepo interface, included the VerifyUser and UpdateUser methods
+4.c) in handlers.go, set up the sign in function
+5. Create Api endpoints for signup and signin in routes.go
