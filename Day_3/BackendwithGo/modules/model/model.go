@@ -13,6 +13,7 @@ type User struct {
 	Password  string             `json:"password" Usage:"required"`
 	Role      string             `json:"role"`
 	Token     string             `json:"token"`
+	New_Token string             `json:"new_token"`
 	CreatedAt time.Time          `json:"created_At"`
 	UpdatedAt time.Time          `json:"updated_At"`
 }
