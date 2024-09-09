@@ -1,0 +1,17 @@
+version: "3"
+services:
+  mongoecomm:
+    image: mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+  goecommapp:
+    image: Praveenrajprp/goecommapp:0.0.1.RELEASE
+    restart: always
+    ports:
+      - "10010:10010"
+    environment:
+      - MONGODB_URI=mongodb://mongoecomm:27017
+volumes:
+  mongo-data:
