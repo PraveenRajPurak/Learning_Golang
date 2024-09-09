@@ -239,7 +239,6 @@ func (g *GoApp) InsertProducts() gin.HandlerFunc {
 
 		product.SupplierID = supplier_id.(primitive.ObjectID)
 
-		filter := bson.D{{Key: "Name", Value: product.Name}}
 
 	}
 }
