@@ -1,0 +1,13 @@
+version: "3"
+services:
+  mongodb:
+    image: mongo
+    ports:
+      - "27017:27017"
+  gomongoapp:
+    image: Praveenrajprp/gomongoapp:0.0.1.RELEASE
+    restart: always
+    ports:
+      - "10005:10005"
+    environment:
+      - MONGODB_URI=mongodb://mongodb:27017
