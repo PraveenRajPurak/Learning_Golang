@@ -1,0 +1,1 @@
+Middlewares and protected Routes are added.
