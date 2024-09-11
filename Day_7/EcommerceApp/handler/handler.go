@@ -202,7 +202,7 @@ func (ga *GoApp) Sign_In() gin.HandlerFunc {
 
 func (ga *GoApp) ForgotPassword() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		email, _ := ctx.Get("email")
+		email, _ := ctx.Get("Email")
 
 		var user *model.User
 
@@ -231,7 +231,7 @@ func (g *GoApp) InsertProducts() gin.HandlerFunc {
 
 		var product *model.Product
 
-		supplier_id, _ := ctx.Get("ID")
+		supplier_id, _ := ctx.Get("UID")
 
 		if err := ctx.ShouldBindJSON(&product); err != nil {
 			_ = ctx.AbortWithError(http.StatusBadRequest, gin.Error{Err: err})
@@ -239,14 +239,55 @@ func (g *GoApp) InsertProducts() gin.HandlerFunc {
 
 		product.SupplierID = supplier_id.(primitive.ObjectID)
 
+		product.CreatedAt, _ = time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
+
+		product.UpdatedAt, _ = time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
+
+		if err := g.App.Validate.Struct(&product); err != nil {
+			if _, ok := err.(*validator.InvalidValidationError); !ok {
+				_ = ctx.AbortWithError(http.StatusBadRequest, gin.Error{Err: err})
+				g.App.InfoLogger.Println(err)
+				return
+			}
+		}
+
+		ok, status, err := g.DB.InsertProduct(product)
+
+		if err != nil {
+			_ = ctx.AbortWithError(http.StatusInternalServerError, gin.Error{Err: err})
+			ctx.JSON(http.StatusInternalServerError, gin.Error{Err: err})
+		}
+
+		if !ok {
+			_ = ctx.AbortWithError(http.StatusInternalServerError, gin.Error{Err: err})
+			ctx.JSON(http.StatusInternalServerError, gin.Error{Err: err})
+		}
+
+		if status == 1 {
+
+			ctx.JSON(http.StatusOK, gin.H{"message": "Product created successfully"})
+		}
+
+		if status == 2 {
+
+			ctx.JSON(http.StatusOK, gin.H{"message": "Product already exists"})
+		}
 
 	}
 }
 
 func (g *GoApp) ViewProducts() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		ctx.JSON(200, gin.H{
-			"message": "Welcome to the update products page of Ecommerce App!",
-		})
+
+		var res []primitive.M
+
+		res, err := g.DB.ViewProducts()
+
+		if err != nil {
+			_ = ctx.AbortWithError(http.StatusInternalServerError, gin.Error{Err: err})
+			ctx.JSON(http.StatusInternalServerError, gin.Error{Err: err})
+		}
+
+		ctx.JSON(http.StatusOK, gin.H{"data": res})
 	}
 }

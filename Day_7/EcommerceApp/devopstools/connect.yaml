@@ -7,7 +7,7 @@ services:
     volumes:
       - mongo-data:/data/db
   goecommapp:
-    image: Praveenrajprp/goecommapp:0.0.1.RELEASE
+    image: Praveenrajprp/goecommapp:0.0.2
     restart: always
     ports:
       - "10010:10010"

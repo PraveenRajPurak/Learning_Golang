@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/PraveenRajPurak/Learning_Golang/Day_7/EcommerceApp/modules/auth"
@@ -10,6 +11,8 @@ import (
 )
 
 func Authorisation() gin.HandlerFunc {
+
+	fmt.Println("Authorisation middleware")
 
 	return func(ctx *gin.Context) {
 
@@ -32,9 +35,11 @@ func Authorisation() gin.HandlerFunc {
 
 		ctx.Set("pass", accessToken)
 		ctx.Set("Email", claims.Email)
-		ctx.Set("ID", claims.ID)
+		ctx.Set("UID", claims.ID)
 		ctx.Set("Name", claims.Name)
 		ctx.Set("Role", claims.Role)
+
+		fmt.Println("Coming out of Authorisation middleware")
 		ctx.Next()
 	}
 }

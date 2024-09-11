@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/PraveenRajPurak/Learning_Golang/Day_7/EcommerceApp/modules/config"
+	"github.com/PraveenRajPurak/Learning_Golang/Day_7/EcommerceApp/modules/encrypt"
 	"github.com/PraveenRajPurak/Learning_Golang/Day_7/EcommerceApp/modules/model"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -96,22 +97,58 @@ func (g *GoAppDB) UpdateUser(userID primitive.ObjectID, tk map[string]string) (b
 	return true, nil
 }
 
-func (g *GoAppDB) InsertPrduct(product *model.Product) (bool, error) {
+func (g *GoAppDB) InsertProduct(product *model.Product) (bool, int, error) {
 
+	suppID := product.SupplierID
 	fmt.Println("Inserting product...")
-	return true, nil
+
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Second)
+
+	defer cancel()
+
+	filter := bson.D{{Key: "name", Value: product.Name}, {Key: "supplier_id", Value: suppID}}
+
+	var res bson.M
+
+	err := Product(g.DB, "product").FindOne(ctx, filter).Decode(&res)
+
+	if err != nil {
+
+		if err == mongo.ErrNoDocuments {
+
+			product.ID = primitive.NewObjectID()
+			_, insertErr := Product(g.DB, "product").InsertOne(ctx, product)
+			if insertErr != nil {
+				g.App.ErrorLogger.Fatalf("cannot add product to the database : %v ", insertErr)
+			}
+
+			return true, 1, nil
+		}
+
+		g.App.ErrorLogger.Fatalf("cannot execute the database query perfectly : %v ", err)
+	}
+
+	return true, 2, nil
+
 }
 
 func (g *GoAppDB) CreateNewPassword(email string, password string) (bool, error) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Second)
 
+	hashed_Password, err := encrypt.Hash(password)
+
+	if err != nil {
+		g.App.ErrorLogger.Fatalf("cannot hash password : %v ", err)
+		return false, err
+	}
+
 	defer cancel()
 
 	filter := bson.D{{Key: "email", Value: email}}
-	update := bson.D{{Key: "$set", Value: bson.D{{Key: "password", Value: password}}}}
+	update := bson.D{{Key: "$set", Value: bson.D{{Key: "password", Value: hashed_Password}}}}
 
-	_, err := User(g.DB, "user").UpdateOne(ctx, filter, update)
+	_, err = User(g.DB, "user").UpdateOne(ctx, filter, update)
 	if err != nil {
 		g.App.ErrorLogger.Fatalf("cannot update user's password in the database : %v ", err)
 		return false, err
@@ -119,4 +156,24 @@ func (g *GoAppDB) CreateNewPassword(email string, password string) (bool, error)
 
 	fmt.Println("Creating new password...")
 	return true, nil
+}
+
+func (g *GoAppDB) ViewProducts() ([]primitive.M, error) {
+
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Second)
+	defer cancel()
+
+	var res []primitive.M
+	cursor, err := Product(g.DB, "product").Find(ctx, bson.D{})
+	if err != nil {
+		g.App.ErrorLogger.Fatalf("cannot execute the database query perfectly : %v ", err)
+		return nil, err
+	}
+
+	if err = cursor.All(ctx, &res); err != nil {
+		g.App.ErrorLogger.Fatalf("cannot execute the database query perfectly : %v ", err)
+		return nil, err
+	}
+
+	return res, nil
 }

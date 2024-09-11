@@ -10,5 +10,6 @@ type DBRepo interface {
 	VerifyUser(email string) (primitive.M, error)
 	UpdateUser(userID primitive.ObjectID, tk map[string]string) (bool, error)
 	CreateNewPassword(email string, password string) (bool, error)
-	InsertPrduct(product *model.Product) (bool, error)
+	InsertProduct(product *model.Product) (bool, int, error)
+	ViewProducts() ([]primitive.M, error)
 }
