@@ -198,7 +198,7 @@ func (ga *GoApp) Sign_In() gin.HandlerFunc {
 	}
 }
 
-func (ga *GoApp) ForgotPassword() gin.HandlerFunc {
+func (ga *GoApp) ForgotPasswordUser() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		email, _ := ctx.Get("Email")
 
@@ -221,6 +221,309 @@ func (ga *GoApp) ForgotPassword() gin.HandlerFunc {
 		}
 
 		ctx.JSON(http.StatusOK, gin.H{"message": "password changed successfully"})
+	}
+}
+
+func (ga *GoApp) ForgotPasswordAdmin() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+
+		email, _ := ctx.Get("Email")
+
+		var admin *model.Admin
+
+		if err := ctx.ShouldBindJSON(&admin); err != nil {
+			_ = ctx.AbortWithError(http.StatusBadRequest, gin.Error{Err: err})
+		}
+
+		admin.Email = email.(string)
+
+		updated, err := ga.DB.CreateNewPassword(admin.Email, admin.Password)
+
+		if err != nil {
+			_ = ctx.AbortWithError(http.StatusInternalServerError, err)
+		}
+
+		if !updated {
+			_ = ctx.AbortWithError(http.StatusInternalServerError, err)
+		}
+
+		ctx.JSON(http.StatusOK, gin.H{"message": "admin's password changed successfully"})
+	}
+}
+
+func (ga *GoApp) Update_Email_User() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+
+		current_email := ctx.MustGet("Email").(string)
+
+		var Input struct {
+			New_Email string `json:"new_email"`
+		}
+
+		if err := ctx.ShouldBindJSON(&Input); err != nil {
+			_ = ctx.AbortWithError(http.StatusBadRequest, gin.Error{Err: err})
+		}
+
+		regMail := regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
+		ok := regMail.MatchString(Input.New_Email)
+
+		if !ok {
+			ctx.JSON(http.StatusBadRequest, gin.H{"message": "invalid email"})
+			return
+		}
+
+		updated, err := ga.DB.UpdateEmailUser(current_email, Input.New_Email)
+
+		if err != nil {
+			_ = ctx.AbortWithError(http.StatusInternalServerError, gin.Error{Err: err})
+		}
+
+		if !updated {
+			_ = ctx.AbortWithError(http.StatusInternalServerError, gin.Error{Err: err})
+		}
+
+		cookieData := sessions.Default(ctx)
+		cookieData.Set("Email", Input.New_Email)
+		if err := cookieData.Save(); err != nil {
+			_ = ctx.AbortWithError(http.StatusInternalServerError, gin.Error{Err: err})
+		}
+
+		ctx.Set("Email", Input.New_Email)
+
+		ctx.JSON(http.StatusOK, gin.H{"message": "email updated successfully"})
+
+	}
+}
+
+func (ga *GoApp) Update_Email_Admin() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+
+		current_email := ctx.MustGet("Email").(string)
+
+		var Input struct {
+			New_Email string `json:"new_email"`
+		}
+
+		if err := ctx.ShouldBindJSON(&Input); err != nil {
+			_ = ctx.AbortWithError(http.StatusBadRequest, gin.Error{Err: err})
+		}
+
+		regMail := regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
+		ok := regMail.MatchString(Input.New_Email)
+
+		if !ok {
+			ctx.JSON(http.StatusBadRequest, gin.H{"message": "invalid email"})
+			return
+		}
+
+		updated, err := ga.DB.UpdateEmailAdmin(current_email, Input.New_Email)
+
+		if err != nil {
+			_ = ctx.AbortWithError(http.StatusInternalServerError, gin.Error{Err: err})
+		}
+
+		if !updated {
+			_ = ctx.AbortWithError(http.StatusInternalServerError, gin.Error{Err: err})
+		}
+
+		cookieData := sessions.Default(ctx)
+		cookieData.Set("Email", Input.New_Email)
+		if err := cookieData.Save(); err != nil {
+			_ = ctx.AbortWithError(http.StatusInternalServerError, gin.Error{Err: err})
+		}
+
+		ctx.Set("Email", Input.New_Email)
+
+		ctx.JSON(http.StatusOK, gin.H{"message": "Admin's email updated successfully"})
+
+	}
+}
+func (ga *GoApp) Update_Name_User() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+
+		email := ctx.MustGet("Email").(string)
+
+		var Input struct {
+			New_Name string `json:"new_name"`
+		}
+
+		if err := ctx.ShouldBindJSON(&Input); err != nil {
+			_ = ctx.AbortWithError(http.StatusBadRequest, gin.Error{Err: err})
+		}
+
+		updated, err := ga.DB.UpdateNameUser(email, Input.New_Name)
+
+		if err != nil {
+			_ = ctx.AbortWithError(http.StatusInternalServerError, gin.Error{Err: err})
+		}
+
+		if !updated {
+			_ = ctx.AbortWithError(http.StatusInternalServerError, gin.Error{Err: err})
+		}
+
+		cookieData := sessions.Default(ctx)
+		cookieData.Set("Name", Input.New_Name)
+		if err := cookieData.Save(); err != nil {
+			_ = ctx.AbortWithError(http.StatusInternalServerError, gin.Error{Err: err})
+		}
+
+		ctx.Set("Name", Input.New_Name)
+
+		ctx.JSON(http.StatusOK, gin.H{"message": "email updated successfully"})
+
+	}
+}
+
+func (ga *GoApp) Update_Name_Admin() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+
+		email := ctx.MustGet("Email").(string)
+
+		var Input struct {
+			New_Name string `json:"new_name"`
+		}
+
+		if err := ctx.ShouldBindJSON(&Input); err != nil {
+			_ = ctx.AbortWithError(http.StatusBadRequest, gin.Error{Err: err})
+		}
+
+		updated, err := ga.DB.UpdateEmailUser(email, Input.New_Name)
+
+		if err != nil {
+			_ = ctx.AbortWithError(http.StatusInternalServerError, gin.Error{Err: err})
+		}
+
+		if !updated {
+			_ = ctx.AbortWithError(http.StatusInternalServerError, gin.Error{Err: err})
+		}
+
+		cookieData := sessions.Default(ctx)
+		cookieData.Set("Name", Input.New_Name)
+		if err := cookieData.Save(); err != nil {
+			_ = ctx.AbortWithError(http.StatusInternalServerError, gin.Error{Err: err})
+		}
+
+		ctx.Set("Name", Input.New_Name)
+
+		ctx.JSON(http.StatusOK, gin.H{"message": "email updated successfully"})
+
+	}
+}
+
+func (ga *GoApp) Update_Phone_User() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+
+		email := ctx.MustGet("Email").(string)
+
+		var Input struct {
+			New_Phone string `json:"new_phone"`
+		}
+
+		if err := ctx.ShouldBindJSON(&Input); err != nil {
+			_ = ctx.AbortWithError(http.StatusBadRequest, gin.Error{Err: err})
+		}
+
+		updated, err := ga.DB.UpdatePhoneUser(email, Input.New_Phone)
+
+		if err != nil {
+			_ = ctx.AbortWithError(http.StatusInternalServerError, gin.Error{Err: err})
+		}
+
+		if !updated {
+			_ = ctx.AbortWithError(http.StatusInternalServerError, gin.Error{Err: err})
+		}
+
+		ctx.JSON(http.StatusOK, gin.H{"message": "phone updated successfully"})
+
+	}
+}
+
+func (ga *GoApp) Update_Phone_Admin() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+
+		email := ctx.MustGet("Email").(string)
+
+		var Input struct {
+			New_Phone string `json:"new_phone"`
+		}
+
+		if err := ctx.ShouldBindJSON(&Input); err != nil {
+			_ = ctx.AbortWithError(http.StatusBadRequest, gin.Error{Err: err})
+		}
+
+		updated, err := ga.DB.UpdatePhoneAdmin(email, Input.New_Phone)
+
+		if err != nil {
+			_ = ctx.AbortWithError(http.StatusInternalServerError, gin.Error{Err: err})
+		}
+
+		if !updated {
+			_ = ctx.AbortWithError(http.StatusInternalServerError, gin.Error{Err: err})
+		}
+
+		ctx.JSON(http.StatusOK, gin.H{"message": "phone updated successfully"})
+
+	}
+}
+
+func (ga *GoApp) SignOutUser() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+
+		userID := ctx.MustGet("UID").(primitive.ObjectID)
+
+		status, err := ga.DB.SignOutUser(userID)
+
+		if err != nil {
+			_ = ctx.AbortWithError(http.StatusInternalServerError, gin.Error{Err: err})
+		}
+
+		if !status {
+			_ = ctx.AbortWithError(http.StatusInternalServerError, gin.Error{Err: err})
+		}
+
+		cookieData := sessions.Default(ctx)
+		cookieData.Clear()
+
+		if err := cookieData.Save(); err != nil {
+			_ = ctx.AbortWithError(http.StatusInternalServerError, gin.Error{Err: err})
+		}
+
+		ctx.Set("UID", nil)
+		ctx.Set("Email", nil)
+		ctx.Set("Name", nil)
+
+		ctx.JSON(http.StatusOK, gin.H{"message": "signed out the user successfully"})
+
+	}
+}
+func (ga *GoApp) SignOutAdmin() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+
+		adminID := ctx.MustGet("UID").(primitive.ObjectID)
+
+		status, err := ga.DB.SignOutAdmin(adminID)
+
+		if err != nil {
+			_ = ctx.AbortWithError(http.StatusInternalServerError, gin.Error{Err: err})
+		}
+
+		if !status {
+			_ = ctx.AbortWithError(http.StatusInternalServerError, gin.Error{Err: err})
+		}
+
+		cookieData := sessions.Default(ctx)
+		cookieData.Clear()
+
+		if err := cookieData.Save(); err != nil {
+			_ = ctx.AbortWithError(http.StatusInternalServerError, gin.Error{Err: err})
+		}
+
+		ctx.Set("UID", nil)
+		ctx.Set("Email", nil)
+		ctx.Set("Name", nil)
+
+		ctx.JSON(http.StatusOK, gin.H{"message": "signed out the admin successfully"})
+
 	}
 }
 

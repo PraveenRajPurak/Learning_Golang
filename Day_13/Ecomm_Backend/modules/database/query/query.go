@@ -163,6 +163,38 @@ func (g *GoAppDB) UpdateAdmin(userID primitive.ObjectID, tk map[string]string) (
 	return true, nil
 }
 
+func (g *GoAppDB) SignOutUser(userID primitive.ObjectID) (bool, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Second)
+	defer cancel()
+
+	filter := bson.D{{Key: "_id", Value: userID}}
+	update := bson.D{{Key: "$set", Value: bson.D{{Key: "token", Value: ""}, {Key: "new_token", Value: ""}}}}
+
+	_, err := User(g.DB, "user").UpdateOne(ctx, filter, update)
+	if err != nil {
+		g.App.ErrorLogger.Fatalf("cannot update user's tokens in the database : %v ", err)
+		return false, err
+	}
+	return true, nil
+
+}
+
+func (g *GoAppDB) SignOutAdmin(adminID primitive.ObjectID) (bool, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Second)
+	defer cancel()
+
+	filter := bson.D{{Key: "_id", Value: adminID}}
+	update := bson.D{{Key: "$set", Value: bson.D{{Key: "token", Value: ""}, {Key: "new_token", Value: ""}}}}
+
+	_, err := User(g.DB, "admin").UpdateOne(ctx, filter, update)
+	if err != nil {
+		g.App.ErrorLogger.Fatalf("cannot update user's tokens in the database : %v ", err)
+		return false, err
+	}
+	return true, nil
+
+}
+
 func (g *GoAppDB) InsertProduct(product *model.Product) (bool, int, error) {
 
 	fmt.Println("Inserting product...")
@@ -223,6 +255,132 @@ func (g *GoAppDB) CreateNewPassword(email string, password string) (bool, error)
 	return true, nil
 }
 
+func (ga *GoAppDB) CreateNewPasswordAdmin(email string, password string) (bool, error) {
+
+	fmt.Println("Creating new password...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Second)
+	defer cancel()
+
+	hashed_Password, err := encrypt.Hash(password)
+
+	if err != nil {
+		ga.App.ErrorLogger.Fatalf("cannot hash password : %v ", err)
+		return false, err
+	}
+
+	filter := bson.D{{Key: "email", Value: email}}
+	update := bson.D{{Key: "$set", Value: bson.D{{Key: "password", Value: hashed_Password}}}}
+
+	_, err = User(ga.DB, "admin").UpdateOne(ctx, filter, update)
+	if err != nil {
+		ga.App.ErrorLogger.Fatalf("cannot update user's password in the database : %v ", err)
+		return false, err
+	}
+
+	fmt.Println("Created new password...")
+
+	return true, nil
+}
+
+func (g *GoAppDB) UpdateEmailUser(current_email string, new_email string) (bool, error) {
+
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Second)
+
+	defer cancel()
+
+	filter := bson.D{{Key: "email", Value: current_email}}
+	update := bson.D{{Key: "$set", Value: bson.D{{Key: "email", Value: new_email}}}}
+
+	_, err := User(g.DB, "user").UpdateOne(ctx, filter, update)
+	if err != nil {
+		g.App.ErrorLogger.Fatalf("cannot update user's email in the database : %v ", err)
+		return false, err
+	}
+	return true, nil
+}
+
+func (g *GoAppDB) UpdateEmailAdmin(current_email string, new_email string) (bool, error) {
+
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Second)
+
+	defer cancel()
+
+	filter := bson.D{{Key: "email", Value: current_email}}
+	update := bson.D{{Key: "$set", Value: bson.D{{Key: "email", Value: new_email}}}}
+
+	_, err := User(g.DB, "admin").UpdateOne(ctx, filter, update)
+	if err != nil {
+		g.App.ErrorLogger.Fatalf("cannot update user's email in the database : %v ", err)
+		return false, err
+	}
+	return true, nil
+}
+
+func (g *GoAppDB) UpdateNameUser(email string, new_name string) (bool, error) {
+
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Second)
+
+	defer cancel()
+
+	filter := bson.D{{Key: "email", Value: email}}
+	update := bson.D{{Key: "$set", Value: bson.D{{Key: "name", Value: new_name}}}}
+
+	_, err := User(g.DB, "user").UpdateOne(ctx, filter, update)
+	if err != nil {
+		g.App.ErrorLogger.Fatalf("cannot update user's name in the database : %v ", err)
+		return false, err
+	}
+	return true, nil
+}
+func (g *GoAppDB) UpdateNameAdmin(email string, new_name string) (bool, error) {
+
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Second)
+
+	defer cancel()
+
+	filter := bson.D{{Key: "email", Value: email}}
+	update := bson.D{{Key: "$set", Value: bson.D{{Key: "name", Value: new_name}}}}
+
+	_, err := User(g.DB, "admin").UpdateOne(ctx, filter, update)
+	if err != nil {
+		g.App.ErrorLogger.Fatalf("cannot update user's name in the database : %v ", err)
+		return false, err
+	}
+	return true, nil
+}
+func (g *GoAppDB) UpdatePhoneUser(email string, new_phone string) (bool, error) {
+
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Second)
+
+	defer cancel()
+
+	filter := bson.D{{Key: "email", Value: email}}
+	update := bson.D{{Key: "$set", Value: bson.D{{Key: "phone", Value: new_phone}}}}
+
+	_, err := User(g.DB, "user").UpdateOne(ctx, filter, update)
+	if err != nil {
+		g.App.ErrorLogger.Fatalf("cannot update user's phone in the database : %v ", err)
+		return false, err
+	}
+	return true, nil
+}
+func (g *GoAppDB) UpdatePhoneAdmin(email string, new_phone string) (bool, error) {
+
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Second)
+
+	defer cancel()
+
+	filter := bson.D{{Key: "email", Value: email}}
+	update := bson.D{{Key: "$set", Value: bson.D{{Key: "phone", Value: new_phone}}}}
+
+	_, err := User(g.DB, "admin").UpdateOne(ctx, filter, update)
+	if err != nil {
+		g.App.ErrorLogger.Fatalf("cannot update user's phone in the database : %v ", err)
+		return false, err
+	}
+	return true, nil
+}
 func (g *GoAppDB) ViewProducts() ([]primitive.M, error) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Second)

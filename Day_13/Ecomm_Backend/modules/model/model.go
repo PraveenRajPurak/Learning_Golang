@@ -21,6 +21,7 @@ type User struct {
 	New_Token string               `json:"new_token"`
 	Cart      []CartItems          `json:"cart"`
 	Orders    []primitive.ObjectID `json:"orders"`
+	Phone     string               `json:"phone"`
 	Addresses []Address            `json:"addresses"`
 	CreatedAt time.Time            `json:"created_At"`
 	UpdatedAt time.Time            `json:"updated_At"`
@@ -118,7 +119,7 @@ type Payment struct {
 
 type Admin struct {
 	ID        primitive.ObjectID `json:"_id" bson:"_id"`
-	Name      string             `json:"username" Usage:"required"`
+	Name      string             `json:"name" Usage:"required"`
 	Password  string             `json:"password" Usage:"required"`
 	Address   Address            `json:"address" Usage:"required"`
 	Website   string             `json:"website" Usage:"required"`

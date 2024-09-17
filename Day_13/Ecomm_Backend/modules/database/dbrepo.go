@@ -16,4 +16,13 @@ type DBRepo interface {
 	SignUpAdmin(admin *model.Admin) (bool, int, error)
 	VerifyAdmin(email string) (primitive.M, error)
 	UpdateAdmin(userID primitive.ObjectID, tk map[string]string) (bool, error)
+	SignOutAdmin(adminID primitive.ObjectID) (bool, error)
+	SignOutUser(userID primitive.ObjectID) (bool, error)
+	CreateNewPasswordAdmin(email string, password string) (bool, error)
+	UpdateEmailUser(current_email string, new_email string) (bool, error)
+	UpdateEmailAdmin(current_email string, new_email string) (bool, error)
+	UpdateNameUser(email string, new_name string) (bool, error)
+	UpdateNameAdmin(email string, new_name string) (bool, error)
+	UpdatePhoneUser(email string, new_phone string) (bool, error)
+	UpdatePhoneAdmin(email string, new_phone string) (bool, error)
 }
