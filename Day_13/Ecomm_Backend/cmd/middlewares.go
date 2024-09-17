@@ -46,6 +46,12 @@ func Authorisation() gin.HandlerFunc {
 
 		filter := bson.D{{Key: "email", Value: claims.Email}}
 
+		if Client == nil {
+			_ = ctx.AbortWithError(http.StatusInternalServerError, gin.Error{
+				Err: err})
+			return
+		}
+
 		ins_err := query.User(Client, "user").FindOne(contex, filter).Decode(&res)
 
 		if ins_err != nil {
@@ -97,6 +103,12 @@ func Admin_Authorisation() gin.HandlerFunc {
 		var res bson.M
 
 		filter := bson.D{{Key: "email", Value: claims.Email}}
+
+		if Client == nil {
+			_ = ctx.AbortWithError(http.StatusInternalServerError, gin.Error{
+				Err: err})
+			return
+		}
 
 		ins_err := query.User(Client, "admin").FindOne(contex, filter).Decode(&res)
 

@@ -126,6 +126,8 @@ type Admin struct {
 	New_Token string             `json:"new_token" Usage:"required"`
 	Email     string             `json:"email" Usage:"required"`
 	Phone     string             `json:"phone" Usage:"required"`
+	CreatedAt time.Time          `json:"created_At"`
+	UpdatedAt time.Time          `json:"updated_At"`
 }
 
 type Ticket struct {
@@ -133,4 +135,6 @@ type Ticket struct {
 	Generated_By primitive.ObjectID `json:"generated_by" bson:"generated_by"`
 	Status       string             `json:"status" bson:"status"`
 	Description  string             `json:"description" bson:"description"`
+	CreatedAt    time.Time          `json:"created_At"`
+	UpdatedAt    time.Time          `json:"updated_At"`
 }

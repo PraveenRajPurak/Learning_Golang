@@ -284,3 +284,164 @@ func (g *GoApp) ViewProducts() gin.HandlerFunc {
 		ctx.JSON(http.StatusOK, gin.H{"data": res})
 	}
 }
+
+func (ga *GoApp) Sign_Up_Admin() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		var admin *model.Admin
+
+		err := ctx.ShouldBindJSON(&admin)
+		if err != nil {
+			_ = ctx.AbortWithError(http.StatusBadRequest, gin.Error{
+				Err: err,
+			})
+		}
+
+		admin.CreatedAt, _ = time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
+		admin.UpdatedAt, _ = time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
+
+		admin.Password, _ = encrypt.Hash(admin.Password)
+
+		if err != nil {
+			_ = ctx.AbortWithError(http.StatusInternalServerError, gin.Error{Err: err})
+		}
+
+		if err := ga.App.Validate.Struct(&admin); err != nil {
+			if _, ok := err.(*validator.InvalidValidationError); !ok {
+				_ = ctx.AbortWithError(http.StatusBadRequest, gin.Error{Err: err})
+				ga.App.InfoLogger.Println(err)
+				return
+			}
+		}
+
+		ok, status, err := ga.DB.SignUpAdmin(admin)
+
+		if err != nil {
+			_ = ctx.AbortWithError(http.StatusInternalServerError, errors.New("error while adding new admin"))
+			ctx.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
+			return
+		}
+
+		if !ok {
+			_ = ctx.AbortWithError(http.StatusInternalServerError, err)
+			return
+		}
+
+		switch status {
+		case 1:
+			{
+				ctx.JSON(http.StatusCreated, gin.H{"message": "Admin created successfully"})
+			}
+		case 2:
+			{
+				ctx.JSON(http.StatusConflict, gin.H{"message": "Admin already exists"})
+			}
+		}
+	}
+}
+
+func (ga *GoApp) Sign_In_Admin() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+
+		var admin *model.Admin
+		if err := ctx.ShouldBindJSON(&admin); err != nil {
+			_ = ctx.AbortWithError(http.StatusBadRequest, gin.Error{Err: err})
+		}
+
+		regMail := regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
+		ok := regMail.MatchString(admin.Email)
+
+		if ok {
+
+			res, err := ga.DB.VerifyAdmin(admin.Email)
+			if err != nil {
+				_ = ctx.AbortWithError(http.StatusInternalServerError, err)
+				ctx.JSON(http.StatusUnauthorized, gin.H{"message": "unregistered user"})
+				return
+			}
+
+			id := res["_id"].(primitive.ObjectID)
+			password := res["password"].(string)
+
+			verified, err := encrypt.VerifyPassword(admin.Password, password)
+			if err != nil {
+				_ = ctx.AbortWithError(http.StatusInternalServerError, err)
+				ctx.JSON(http.StatusUnauthorized, gin.H{"message": "unregistered user detected using wrong password"})
+				return
+			}
+
+			if verified {
+
+				cookieData := sessions.Default(ctx)
+
+				adminInfo := map[string]interface{}{
+					"ID":    id,
+					"Email": admin.Email,
+					"Name":  res["name"],
+				}
+
+				cookieData.Set("adminInfo", adminInfo)
+
+				if err := cookieData.Save(); err != nil {
+					_ = ctx.AbortWithError(http.StatusInternalServerError, err)
+					ctx.JSON(http.StatusInternalServerError, gin.H{"message": "error while saving cookie"})
+					return
+				}
+
+				t1, t2, err := auth.Generate(admin.Email, id, res["name"].(string))
+
+				if err != nil {
+					_ = ctx.AbortWithError(http.StatusInternalServerError, err)
+					ctx.JSON(http.StatusInternalServerError, gin.H{"message": "error while generating tokens"})
+					return
+				}
+
+				cookieData.Set("token", t1)
+
+				if err := cookieData.Save(); err != nil {
+					_ = ctx.AbortWithError(http.StatusInternalServerError, err)
+					ctx.JSON(http.StatusInternalServerError, gin.H{"message": "error while saving cookie"})
+					return
+				}
+
+				cookieData.Set("new_token", t2)
+
+				if err := cookieData.Save(); err != nil {
+					_ = ctx.AbortWithError(http.StatusInternalServerError, err)
+					ctx.JSON(http.StatusInternalServerError, gin.H{"message": "error while saving cookie"})
+					return
+				}
+
+				tk := map[string]string{
+					"token":    t1,
+					"newToken": t2,
+				}
+
+				updated, err := ga.DB.UpdateAdmin(id, tk)
+
+				if err != nil {
+					_ = ctx.AbortWithError(http.StatusInternalServerError, err)
+					ctx.JSON(http.StatusInternalServerError, gin.H{"message": "error while updating tokens"})
+					return
+				}
+
+				if !updated {
+					_ = ctx.AbortWithError(http.StatusInternalServerError, err)
+					ctx.JSON(http.StatusInternalServerError, gin.H{"message": "error while updating tokens"})
+					return
+				}
+
+				ctx.JSON(http.StatusOK, gin.H{
+					"message":       "Successfully Logged in",
+					"email":         admin.Email,
+					"id":            id,
+					"name":          res["name"],
+					"session_token": t1,
+				})
+			} else {
+				ctx.JSON(http.StatusUnauthorized, gin.H{"message": "unregistered user detected using wrong credentials"})
+				return
+			}
+		}
+	}
+}
+

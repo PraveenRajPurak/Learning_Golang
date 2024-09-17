@@ -13,4 +13,7 @@ type DBRepo interface {
 	InsertProduct(product *model.Product) (bool, int, error)
 	ViewProducts() ([]primitive.M, error)
 	CreateCategory(category *model.Category) (bool, int, error)
+	SignUpAdmin(admin *model.Admin) (bool, int, error)
+	VerifyAdmin(email string) (primitive.M, error)
+	UpdateAdmin(userID primitive.ObjectID, tk map[string]string) (bool, error)
 }
