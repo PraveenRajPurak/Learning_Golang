@@ -18,11 +18,17 @@ func Routes(r *gin.Engine, g *handler.GoApp) {
 	router.POST("/sign-up", g.Sign_Up())
 	router.POST("/sign-in", g.Sign_In())
 
-	protected := r.Group("/")
-	protected.Use(Authorisation())
+	protectedUsers := r.Group("/users")
+	protectedUsers.Use(Authorisation())
 
-	protected.POST("/forgot-password", g.ForgotPassword())
-	protected.POST("/insert-products", g.InsertProducts())
-	protected.GET("/view-products", g.ViewProducts())
+	protectedUsers.POST("/forgot-password", g.ForgotPassword())
+	protectedUsers.GET("/view-products", g.ViewProducts())
+
+	protectedAdmin := r.Group("/admin")
+	protectedAdmin.Use(Admin_Authorisation())
+
+	protectedAdmin.POST("/sign-up-admin", g.Sign_Up_Admin())
+	protectedAdmin.POST("/sign-in-admin", g.Sign_In_Admin())
+	protectedAdmin.POST("create-category", g.CreateCategory())
 
 }

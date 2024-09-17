@@ -445,3 +445,47 @@ func (ga *GoApp) Sign_In_Admin() gin.HandlerFunc {
 	}
 }
 
+func (ga *GoApp) CreateCategory() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+
+		var category *model.Category
+		if err := ctx.ShouldBindJSON(&category); err != nil {
+			_ = ctx.AbortWithError(http.StatusBadRequest, gin.Error{Err: err})
+		}
+
+		category.CreatedAt, _ = time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
+		category.UpdatedAt, _ = time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
+
+		if err := ga.App.Validate.Struct(&category); err != nil {
+			if _, ok := err.(*validator.InvalidValidationError); !ok {
+				_ = ctx.AbortWithError(http.StatusBadRequest, err)
+				ga.App.ErrorLogger.Println(err)
+				return
+			}
+		}
+
+		ok, status, err := ga.DB.CreateCategory(category)
+
+		if err != nil {
+			_ = ctx.AbortWithError(http.StatusInternalServerError, errors.New("error while adding new category"))
+			ctx.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
+			return
+		}
+
+		if !ok {
+			_ = ctx.AbortWithError(http.StatusInternalServerError, err)
+			return
+		}
+
+		switch status {
+		case 1:
+			{
+				ctx.JSON(http.StatusCreated, gin.H{"message": "Category created successfully"})
+			}
+		case 2:
+			{
+				ctx.JSON(http.StatusConflict, gin.H{"message": "Category already exists"})
+			}
+		}
+	}
+}
