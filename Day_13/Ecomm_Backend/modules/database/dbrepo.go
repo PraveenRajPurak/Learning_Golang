@@ -25,4 +25,13 @@ type DBRepo interface {
 	UpdateNameAdmin(email string, new_name string) (bool, error)
 	UpdatePhoneUser(email string, new_phone string) (bool, error)
 	UpdatePhoneAdmin(email string, new_phone string) (bool, error)
+	UpdateProduct(product *model.Product) (bool, error)
+	Toggle_Stock(productID primitive.ObjectID) (bool, error)
+	AddProductToWishlist(Product_Id primitive.ObjectID, User_Id primitive.ObjectID) (bool, error)
+	RemoveProductFromWishlist(Product_Id primitive.ObjectID, User_Id primitive.ObjectID) (bool, error)
+	GetSingleProduct(Id primitive.ObjectID) (primitive.M, error)
+	AddToCart(userID primitive.ObjectID, cartItems *model.CartItems) (bool, error)
+	RemoveFromCart(userID primitive.ObjectID, productID primitive.ObjectID) (bool, error)
+	GetAllUsers() ([]primitive.M, error)
+	InitializeUser(userId primitive.ObjectID) (bool, error)
 }

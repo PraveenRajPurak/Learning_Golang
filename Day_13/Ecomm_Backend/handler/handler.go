@@ -55,6 +55,9 @@ func (ga *GoApp) Sign_Up() gin.HandlerFunc {
 
 		user.Password, _ = encrypt.Hash(user.Password)
 
+		user.Addresses = []model.Address{}
+		user.Cart = []model.CartItems{}
+
 		if err != nil {
 			_ = ctx.AbortWithError(http.StatusInternalServerError, gin.Error{Err: err})
 		}
@@ -369,7 +372,7 @@ func (ga *GoApp) Update_Name_User() gin.HandlerFunc {
 
 		ctx.Set("Name", Input.New_Name)
 
-		ctx.JSON(http.StatusOK, gin.H{"message": "email updated successfully"})
+		ctx.JSON(http.StatusOK, gin.H{"message": "name updated successfully"})
 
 	}
 }
@@ -387,7 +390,7 @@ func (ga *GoApp) Update_Name_Admin() gin.HandlerFunc {
 			_ = ctx.AbortWithError(http.StatusBadRequest, gin.Error{Err: err})
 		}
 
-		updated, err := ga.DB.UpdateEmailUser(email, Input.New_Name)
+		updated, err := ga.DB.UpdateNameAdmin(email, Input.New_Name)
 
 		if err != nil {
 			_ = ctx.AbortWithError(http.StatusInternalServerError, gin.Error{Err: err})
@@ -405,7 +408,7 @@ func (ga *GoApp) Update_Name_Admin() gin.HandlerFunc {
 
 		ctx.Set("Name", Input.New_Name)
 
-		ctx.JSON(http.StatusOK, gin.H{"message": "email updated successfully"})
+		ctx.JSON(http.StatusOK, gin.H{"message": "user's name updated successfully"})
 
 	}
 }
@@ -698,7 +701,7 @@ func (ga *GoApp) Sign_In_Admin() gin.HandlerFunc {
 					return
 				}
 
-				cookieData.Set("token", t1)
+				cookieData.Set("admin_token", t1)
 
 				if err := cookieData.Save(); err != nil {
 					_ = ctx.AbortWithError(http.StatusInternalServerError, err)
@@ -706,7 +709,7 @@ func (ga *GoApp) Sign_In_Admin() gin.HandlerFunc {
 					return
 				}
 
-				cookieData.Set("new_token", t2)
+				cookieData.Set("new_admin_token", t2)
 
 				if err := cookieData.Save(); err != nil {
 					_ = ctx.AbortWithError(http.StatusInternalServerError, err)
@@ -790,5 +793,249 @@ func (ga *GoApp) CreateCategory() gin.HandlerFunc {
 				ctx.JSON(http.StatusConflict, gin.H{"message": "Category already exists"})
 			}
 		}
+	}
+}
+
+func (ga *GoApp) UpdateProduct() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+
+		var product *model.Product
+
+		if err := ctx.ShouldBindJSON(&product); err != nil {
+			_ = ctx.AbortWithError(http.StatusBadRequest, gin.Error{Err: err})
+		}
+
+		ok, err := ga.DB.UpdateProduct(product)
+
+		if err != nil {
+			_ = ctx.AbortWithError(http.StatusInternalServerError, gin.Error{Err: err})
+		}
+
+		if !ok {
+			_ = ctx.AbortWithError(http.StatusInternalServerError, gin.Error{Err: err})
+		}
+
+		ga.App.InfoLogger.Println("Product updated successfully")
+
+		ctx.JSON(http.StatusOK, gin.H{"message": "Product updated successfully"})
+
+	}
+}
+
+func (ga *GoApp) ToggleStock() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+
+		var Input struct {
+			ProductID primitive.ObjectID `json:"product_id"`
+		}
+
+		if err := ctx.ShouldBindJSON(&Input); err != nil {
+			_ = ctx.AbortWithError(http.StatusBadRequest, gin.Error{Err: err})
+		}
+
+		ok, err := ga.DB.Toggle_Stock(Input.ProductID)
+
+		if err != nil {
+			_ = ctx.AbortWithError(http.StatusInternalServerError, gin.Error{Err: err})
+		}
+
+		if !ok {
+			_ = ctx.AbortWithError(http.StatusInternalServerError, gin.Error{Err: err})
+		}
+
+		ga.App.InfoLogger.Println("Stock toggled successfully")
+
+		ctx.JSON(http.StatusOK, gin.H{"message": "Stock toggled successfully"})
+
+	}
+}
+
+func (ga *GoApp) AddToWishList() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+
+		user_id := ctx.MustGet("UID").(primitive.ObjectID)
+
+		var Input struct {
+			ProductID primitive.ObjectID `json:"product_id"`
+		}
+
+		if err := ctx.ShouldBindJSON(&Input); err != nil {
+			_ = ctx.AbortWithError(http.StatusBadRequest, gin.Error{Err: err})
+		}
+
+		ok, err := ga.DB.AddProductToWishlist(Input.ProductID, user_id)
+
+		if err != nil {
+			_ = ctx.AbortWithError(http.StatusInternalServerError, gin.Error{Err: err})
+		}
+
+		if !ok {
+			_ = ctx.AbortWithError(http.StatusInternalServerError, gin.Error{Err: err})
+		}
+
+		ga.App.InfoLogger.Println("Product added to wishlist successfully")
+
+		ctx.JSON(http.StatusOK, gin.H{"message": "Product added to wishlist successfully"})
+
+	}
+}
+
+func (ga *GoApp) RemoveFromWishList() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+
+		user_id := ctx.MustGet("UID").(primitive.ObjectID)
+
+		var Input struct {
+			ProductID primitive.ObjectID `json:"product_id"`
+		}
+
+		if err := ctx.ShouldBindJSON(&Input); err != nil {
+			_ = ctx.AbortWithError(http.StatusBadRequest, gin.Error{Err: err})
+		}
+
+		ok, err := ga.DB.RemoveProductFromWishlist(Input.ProductID, user_id)
+
+		if err != nil {
+			_ = ctx.AbortWithError(http.StatusInternalServerError, gin.Error{Err: err})
+		}
+
+		if !ok {
+			_ = ctx.AbortWithError(http.StatusInternalServerError, gin.Error{Err: err})
+		}
+
+		ga.App.InfoLogger.Println("Product removed from wishlist successfully")
+
+		ctx.JSON(http.StatusOK, gin.H{"message": "Product removed from wishlist successfully"})
+	}
+}
+
+func (ga *GoApp) Get_Single_Product() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+
+		var Input struct {
+			ProductID primitive.ObjectID `json:"product_id"`
+		}
+
+		if err := ctx.ShouldBindJSON(&Input); err != nil {
+			_ = ctx.AbortWithError(http.StatusBadRequest, gin.Error{Err: err})
+		}
+
+		product, err := ga.DB.GetSingleProduct(Input.ProductID)
+
+		if err != nil {
+			_ = ctx.AbortWithError(http.StatusInternalServerError, gin.Error{Err: err})
+		}
+
+		if product == nil {
+			_ = ctx.AbortWithError(http.StatusInternalServerError, gin.Error{Err: err})
+		}
+
+		ctx.JSON(http.StatusOK, gin.H{"data": product, "message": "Product fetched successfully"})
+	}
+}
+
+func (ga *GoApp) Add_To_Cart() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+
+		user_id := ctx.MustGet("UID").(primitive.ObjectID)
+
+		var cartitem *model.CartItems
+
+		if err := ctx.ShouldBindJSON(&cartitem); err != nil {
+			ga.App.ErrorLogger.Println("There is some problem in binding json : ", err)
+			_ = ctx.AbortWithError(http.StatusBadRequest, gin.Error{Err: err})
+		}
+
+		productID := cartitem.ProductID
+		prdID, err := primitive.ObjectIDFromHex(productID.Hex())
+
+		if err != nil {
+			ga.App.ErrorLogger.Println("There is some problem in getting product id : ", err)
+			_ = ctx.AbortWithError(http.StatusInternalServerError, gin.Error{Err: err})
+		}
+		cartitem.ProductID = prdID
+
+		ok, err := ga.DB.AddToCart(user_id, cartitem)
+
+		if err != nil {
+			_ = ctx.AbortWithError(http.StatusInternalServerError, gin.Error{Err: err})
+		}
+
+		if !ok {
+			_ = ctx.AbortWithError(http.StatusInternalServerError, gin.Error{Err: err})
+		}
+
+		ga.App.InfoLogger.Println("Product added to cart successfully")
+
+		ctx.JSON(http.StatusOK, gin.H{"message": "Product added to cart successfully"})
+
+	}
+}
+
+func (ga *GoApp) Remove_From_Cart() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+
+		user_id := ctx.MustGet("UID").(primitive.ObjectID)
+
+		var Input struct {
+			ProductID primitive.ObjectID `json:"product_id"`
+		}
+
+		if err := ctx.ShouldBindJSON(&Input); err != nil {
+			_ = ctx.AbortWithError(http.StatusBadRequest, gin.Error{Err: err})
+		}
+
+		ok, err := ga.DB.RemoveFromCart(user_id, Input.ProductID)
+
+		if err != nil {
+			_ = ctx.AbortWithError(http.StatusInternalServerError, gin.Error{Err: err})
+		}
+
+		if !ok {
+			_ = ctx.AbortWithError(http.StatusInternalServerError, gin.Error{Err: err})
+		}
+
+		ga.App.InfoLogger.Println("Product Removed from cart successfully")
+
+		ctx.JSON(http.StatusOK, gin.H{"message": "Product Removed from cart successfully"})
+
+	}
+}
+
+func (ga *GoApp) Get_All_Users() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+
+		users, err := ga.DB.GetAllUsers()
+
+		if err != nil {
+			_ = ctx.AbortWithError(http.StatusInternalServerError, gin.Error{Err: err})
+		}
+
+		if users == nil {
+			_ = ctx.AbortWithError(http.StatusInternalServerError, gin.Error{Err: err})
+		}
+
+		ctx.JSON(http.StatusOK, gin.H{"data": users, "message": "Users fetched successfully"})
+	}
+}
+
+func (ga *GoApp) Initialize_User() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+
+		userId := ctx.MustGet("UID").(primitive.ObjectID)
+
+		status, er := ga.DB.InitializeUser(userId)
+
+		if er != nil {
+			ga.App.ErrorLogger.Println("There is some problem in initializing user : ", er)
+			_ = ctx.AbortWithError(http.StatusInternalServerError, gin.Error{Err: er})
+		}
+
+		if !status {
+			_ = ctx.AbortWithError(http.StatusInternalServerError, gin.Error{Err: er})
+		}
+
+		ga.App.InfoLogger.Println("User initialized successfully")
+
 	}
 }

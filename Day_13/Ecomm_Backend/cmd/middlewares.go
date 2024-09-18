@@ -75,17 +75,17 @@ func Authorisation() gin.HandlerFunc {
 }
 func Admin_Authorisation() gin.HandlerFunc {
 
-	fmt.Println("Authorisation middleware")
+	fmt.Println("Admin Authorisation middleware")
 
 	return func(ctx *gin.Context) {
 
 		cookieData := sessions.Default(ctx)
 
-		accessToken := cookieData.Get("token").(string)
+		accessToken, exists := cookieData.Get("admin_token").(string)
 
-		if accessToken == "" {
+		if !exists || accessToken == "" {
 
-			_ = ctx.AbortWithError(http.StatusUnauthorized, errors.New("unauthorized user"))
+			_ = ctx.AbortWithError(http.StatusUnauthorized, errors.New("unauthorized admin"))
 			return
 		}
 
