@@ -35,7 +35,12 @@ type DBRepo interface {
 	GetAllUsers() ([]primitive.M, error)
 	InitializeUser(userId primitive.ObjectID) (bool, error)
 	CreateOrder(order *model.Order) (bool, error)
-	FindUserIDWithName(name string) (primitive.ObjectID, error)
+	FindUserIDWithEmail(name string) (primitive.ObjectID, error)
 	GetAllOrders() ([]primitive.M, error)
 	DeleteProduct(id primitive.ObjectID) (bool, error)
+	DeleteOrder(id primitive.ObjectID) (bool, error)
+	InsertOrdertoUser(userID primitive.ObjectID, OrderId primitive.ObjectID) (bool, error)
+	ShipmentCreation(shipment *model.Shipment) (primitive.M, error)
+	PaymentCreation(payment *model.Payment) (primitive.M, error)
+	GetAllShipments() ([]primitive.M, error)
 }

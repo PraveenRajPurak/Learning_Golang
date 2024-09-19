@@ -39,6 +39,8 @@ func Routes(r *gin.Engine, g *handler.GoApp) {
 	protectedUsers.POST("remove-from-cart", g.Remove_From_Cart())
 	protectedUsers.POST("initialize-user", g.Initialize_User())
 	protectedUsers.POST("place-order", g.Create_Order_As_User())
+	protectedUsers.POST("payment-creation", g.Payment_Creation())
+	protectedUsers.POST("shipment-creation", g.Shipment_Creation())
 
 	protectedAdmin := r.Group("/admin")
 	protectedAdmin.Use(sessions.Sessions("admin_session", adminCookieStore))
@@ -56,5 +58,6 @@ func Routes(r *gin.Engine, g *handler.GoApp) {
 	protectedAdmin.POST("place-order", g.Create_Order_As_Admin())
 	protectedAdmin.GET("view-orders", g.Get_All_Orders())
 	protectedAdmin.DELETE("delete-product/:id", g.DeleteProduct())
+	protectedAdmin.DELETE("delete-order/:id", g.DeleteOrder())
 
 }

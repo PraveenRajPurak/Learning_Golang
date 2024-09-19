@@ -23,6 +23,8 @@ type User struct {
 	Orders    []primitive.ObjectID `json:"orders"`
 	Phone     string               `json:"phone"`
 	Addresses []Address            `json:"addresses"`
+	Payments  []primitive.ObjectID `json:"payments"`
+	Shipments []primitive.ObjectID `json:"shipments"`
 	Wishlist  []primitive.ObjectID `json:"wishlist"`
 	CreatedAt time.Time            `json:"created_At"`
 	UpdatedAt time.Time            `json:"updated_At"`

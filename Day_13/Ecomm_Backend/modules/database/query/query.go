@@ -445,7 +445,7 @@ func (g *GoAppDB) UpdateProduct(product *model.Product) (bool, error) {
 			{Key: "name", Value: product.Name},
 			{Key: "description", Value: product.Description},
 			{Key: "description.dimension", Value: product.Description.Dimension},
-			
+
 			{Key: "category", Value: product.Category},
 			{Key: "company_name", Value: product.Company_Name},
 			{Key: "model_name", Value: product.Model_Name},
@@ -639,7 +639,10 @@ func (g *GoAppDB) InitializeUser(userId primitive.ObjectID) (bool, error) {
 
 	filter := bson.D{{Key: "_id", Value: userId}}
 
-	update := bson.D{{Key: "$set", Value: bson.D{{Key: "cart", Value: bson.A{}}, {Key: "addresses", Value: bson.A{}}}}}
+	update := bson.D{{Key: "$set", Value: bson.D{{Key: "cart", Value: bson.A{}},
+		{Key: "addresses", Value: bson.A{}}, {Key: "orders", Value: bson.A{}},
+		{Key: "payments", Value: bson.A{}}, {Key: "shipments", Value: bson.A{}},
+	}}}
 
 	_, err := User(g.DB, "user").UpdateOne(ctx, filter, update)
 
@@ -657,38 +660,40 @@ func (g *GoAppDB) CreateOrder(order *model.Order) (bool, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Second)
 	defer cancel()
 
-	order.ID = primitive.NewObjectID()
-
 	_, err := User(g.DB, "orders").InsertOne(ctx, order)
 	if err != nil {
 		g.App.ErrorLogger.Fatalf("cannot insert order in the database : %v ", err)
 		return false, err
 	}
-
-	filter := bson.D{{Key: "_id", Value: order.CustomerID}}
-
-	update := bson.D{{Key: "$push", Value: bson.D{{Key: "orders", Value: order.ID}}}}
-
-	updatedetails, err := User(g.DB, "user").UpdateOne(ctx, filter, update)
-
-	if err != nil {
-		g.App.ErrorLogger.Fatalf("cannot execute the database query perfectly : %v ", err)
-		return false, err
-	}
-
-	g.App.InfoLogger.Printf("Matched %v documents and updated %v documents.\n", updatedetails.MatchedCount, updatedetails.ModifiedCount)
-
 	return true, nil
 }
 
-func (ga *GoAppDB) FindUserIDWithName(name string) (primitive.ObjectID, error) {
+func (g *GoAppDB) InsertOrdertoUser(userID primitive.ObjectID, OrderId primitive.ObjectID) (bool, error) {
+
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Second)
+	defer cancel()
+
+	filter := bson.D{{Key: "_id", Value: userID}}
+
+	update := bson.D{{Key: "$push", Value: bson.D{{Key: "orders", Value: OrderId}}}}
+
+	_, err := User(g.DB, "user").UpdateOne(ctx, filter, update)
+
+	if err != nil {
+		g.App.ErrorLogger.Fatalf("cannot insert order in the database : %v ", err)
+		return false, err
+	}
+	return true, nil
+}
+
+func (ga *GoAppDB) FindUserIDWithEmail(email string) (primitive.ObjectID, error) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Second)
 	defer cancel()
 
 	var res primitive.M
 
-	filter := bson.D{{Key: "name", Value: name}}
+	filter := bson.D{{Key: "email", Value: email}}
 
 	err := User(ga.DB, "user").FindOne(ctx, filter).Decode(&res)
 
@@ -737,4 +742,114 @@ func (ga *GoAppDB) DeleteProduct(id primitive.ObjectID) (bool, error) {
 	}
 
 	return true, nil
+}
+
+func (ga *GoAppDB) DeleteOrder(id primitive.ObjectID) (bool, error) {
+
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Second)
+	defer cancel()
+
+	filter := bson.D{{Key: "_id", Value: id}}
+
+	var res primitive.M
+
+	err := User(ga.DB, "orders").FindOne(ctx, filter).Decode(&res)
+
+	if err != nil {
+		ga.App.ErrorLogger.Fatalf("cannot execute the database query perfectly : %v ", err)
+		return false, err
+	}
+
+	filter = bson.D{{Key: "_id", Value: res["customer_id"]}}
+
+	update := bson.D{{Key: "$pull", Value: bson.D{{Key: "orders", Value: id}}}}
+
+	updateInformation, err := User(ga.DB, "user").UpdateOne(ctx, filter, update)
+
+	if err != nil {
+		ga.App.ErrorLogger.Fatalf("cannot execute the database query perfectly : %v ", err)
+		return false, err
+	}
+
+	ga.App.InfoLogger.Printf("Matched %v documents and updated %v documents.\n", updateInformation.MatchedCount, updateInformation.ModifiedCount)
+
+	_, err = User(ga.DB, "orders").DeleteOne(ctx, filter)
+
+	if err != nil {
+		ga.App.ErrorLogger.Fatalf("cannot execute the database query perfectly : %v ", err)
+		return false, err
+	}
+
+	return true, nil
+}
+
+func (ga *GoAppDB) ShipmentCreation(shipment *model.Shipment) (primitive.M, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Second)
+	defer cancel()
+
+	cr, err := User(ga.DB, "shipment").InsertOne(ctx, shipment)
+	if err != nil {
+		ga.App.ErrorLogger.Fatalf("cannot insert shipment in the database : %v ", err)
+		return nil, err
+	}
+
+	filter := bson.D{{Key: "_id", Value: cr.InsertedID}}
+
+	var res primitive.M
+
+	err = User(ga.DB, "shipment").FindOne(ctx, filter).Decode(&res)
+
+	if err != nil {
+		ga.App.ErrorLogger.Fatalf("cannot execute the database query perfectly : %v ", err)
+		return nil, err
+	}
+	
+	return res, nil
+}
+
+func (ga *GoAppDB) PaymentCreation(payment *model.Payment) (primitive.M, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Second)
+	defer cancel()
+
+	cr, err := User(ga.DB, "payment").InsertOne(ctx, payment)
+	if err != nil {
+		ga.App.ErrorLogger.Fatalf("cannot insert payment in the database : %v ", err)
+		return nil, err
+	}
+	fmt.Println(cr)
+
+	filter := bson.D{{Key: "_id", Value: cr.InsertedID}}
+
+	var res primitive.M
+
+	err = User(ga.DB, "payment").FindOne(ctx, filter).Decode(&res)
+
+	if err != nil {
+		ga.App.ErrorLogger.Fatalf("cannot execute the database query perfectly : %v ", err)
+		return nil, err
+	}
+
+	return res, nil
+}
+
+func (ga *GoAppDB) GetAllShipments() ([]primitive.M, error) {
+
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Second)
+	defer cancel()
+
+	var res []primitive.M
+
+	cursor, err := User(ga.DB, "shipment").Find(ctx, bson.D{})
+
+	if err != nil {
+		ga.App.ErrorLogger.Fatalf("cannot execute the database query perfectly : %v ", err)
+		return nil, err
+	}
+
+	if err = cursor.All(ctx, &res); err != nil {
+		ga.App.ErrorLogger.Fatalf("cannot execute the database query perfectly. There is some problem in cursor : %v ", err)
+		return nil, err
+	}
+
+	return res, nil
 }

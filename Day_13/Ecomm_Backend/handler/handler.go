@@ -57,6 +57,9 @@ func (ga *GoApp) Sign_Up() gin.HandlerFunc {
 
 		user.Addresses = []model.Address{}
 		user.Cart = []model.CartItems{}
+		user.Orders = []primitive.ObjectID{}
+		user.Payments = []primitive.ObjectID{}
+		user.Shipments = []primitive.ObjectID{}
 
 		if err != nil {
 			_ = ctx.AbortWithError(http.StatusInternalServerError, gin.Error{Err: err})
@@ -1045,8 +1048,8 @@ func (ga *GoApp) Create_Order_As_Admin() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 
 		var Input struct {
-			Customer_Name string      `json:"customer_name"`
-			Order         model.Order `json:"order"`
+			Email string      `json:"customer_name"`
+			Order model.Order `json:"order"`
 		}
 
 		if err := ctx.ShouldBindJSON(&Input); err != nil {
@@ -1057,7 +1060,7 @@ func (ga *GoApp) Create_Order_As_Admin() gin.HandlerFunc {
 		Input.Order.CreatedAt = time.Now()
 		Input.Order.UpdatedAt = time.Now()
 
-		id, err := ga.DB.FindUserIDWithName(Input.Customer_Name)
+		id, err := ga.DB.FindUserIDWithEmail(Input.Email)
 
 		if err != nil {
 			_ = ctx.AbortWithError(http.StatusInternalServerError, gin.Error{Err: err})
@@ -1069,6 +1072,22 @@ func (ga *GoApp) Create_Order_As_Admin() gin.HandlerFunc {
 
 		}
 		Input.Order.CustomerID = id
+
+		Input.Order.ID = primitive.NewObjectID()
+
+		check, err := ga.DB.InsertOrdertoUser(id, Input.Order.ID)
+
+		if err != nil {
+			ga.App.ErrorLogger.Println("There is some problem in creating order : ", err)
+			_ = ctx.AbortWithError(http.StatusInternalServerError, gin.Error{Err: err})
+		}
+
+		if !check {
+			ga.App.ErrorLogger.Println("There is some problem in creating order : ", err)
+			_ = ctx.AbortWithError(http.StatusInternalServerError, gin.Error{Err: err})
+		}
+
+		ga.App.InfoLogger.Println("Order added to user's order list successfully")
 
 		ok, err := ga.DB.CreateOrder(&Input.Order)
 
@@ -1098,9 +1117,24 @@ func (ga *GoApp) Create_Order_As_User() gin.HandlerFunc {
 			_ = ctx.AbortWithError(http.StatusBadRequest, gin.Error{Err: err})
 		}
 
+		userId := ctx.MustGet("UID").(primitive.ObjectID)
+
 		order.CreatedAt = time.Now()
 		order.UpdatedAt = time.Now()
-		order.CustomerID = ctx.MustGet("UID").(primitive.ObjectID)
+		order.CustomerID = userId
+		order.ID = primitive.NewObjectID()
+
+		check, err := ga.DB.InsertOrdertoUser(userId, order.ID)
+
+		if err != nil {
+			ga.App.ErrorLogger.Println("There is some problem in creating order : ", err)
+			_ = ctx.AbortWithError(http.StatusInternalServerError, gin.Error{Err: err})
+		}
+
+		if !check {
+			ga.App.ErrorLogger.Println("There is some problem in creating order : ", err)
+			_ = ctx.AbortWithError(http.StatusInternalServerError, gin.Error{Err: err})
+		}
 
 		ok, err := ga.DB.CreateOrder(order)
 
@@ -1164,5 +1198,98 @@ func (ga *GoApp) DeleteProduct() gin.HandlerFunc {
 		}
 
 		ctx.JSON(http.StatusOK, gin.H{"message": "Product deleted successfully"})
+	}
+}
+
+func (ga *GoApp) DeleteOrder() gin.HandlerFunc {
+
+	return func(ctx *gin.Context) {
+
+		id := ctx.Param("id")
+
+		if id == "" {
+
+			ga.App.ErrorLogger.Println("There is some problem in getting order id from the param")
+			return
+		}
+
+		idObj, _ := primitive.ObjectIDFromHex(id)
+		ok, err := ga.DB.DeleteOrder(idObj)
+
+		if err != nil {
+			ga.App.ErrorLogger.Println("There is some problem in deleting order : ", err)
+			_ = ctx.AbortWithError(http.StatusInternalServerError, gin.Error{Err: err})
+		}
+
+		if !ok {
+			ga.App.ErrorLogger.Println("There is some problem in deleting order : ", err)
+			_ = ctx.AbortWithError(http.StatusInternalServerError, gin.Error{Err: err})
+		}
+
+		ctx.JSON(http.StatusOK, gin.H{"message": "Order deleted successfully"})
+	}
+}
+
+func (ga *GoApp) Payment_Creation() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+
+		userId := ctx.MustGet("UID").(primitive.ObjectID)
+
+		var payment *model.Payment
+		if err := ctx.ShouldBindJSON(&payment); err != nil {
+			_ = ctx.AbortWithError(http.StatusBadRequest, gin.Error{Err: err})
+		}
+
+		payment.ID = primitive.NewObjectID()
+
+		payment.PaidBy = userId
+		payment.Paid_Date = time.Now()
+		payment.CreatedAt = time.Now()
+		payment.UpdatedAt = time.Now()
+
+		payment_details, err := ga.DB.PaymentCreation(payment)
+
+		if err != nil {
+			ga.App.ErrorLogger.Println("There is some problem in creating payment : ", err)
+			_ = ctx.AbortWithError(http.StatusInternalServerError, gin.Error{Err: err})
+		}
+
+		if payment_details == nil {
+			ga.App.ErrorLogger.Println("There is some problem in creating payment : ", err)
+			_ = ctx.AbortWithError(http.StatusInternalServerError, gin.Error{Err: err})
+		}
+
+		ctx.JSON(http.StatusOK, gin.H{"message": "Payment created successfully", "data": payment_details})
+
+	}
+}
+
+func (ga *GoApp) Shipment_Creation() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+
+		var shipment *model.Shipment
+		if err := ctx.ShouldBindJSON(&shipment); err != nil {
+			_ = ctx.AbortWithError(http.StatusBadRequest, gin.Error{Err: err})
+		}
+
+		shipment.ID = primitive.NewObjectID()
+
+		shipment.CreatedAt = time.Now()
+		shipment.UpdatedAt = time.Now()
+		shipment.Shipment_Date = time.Now()
+
+		shipment_details, err := ga.DB.ShipmentCreation(shipment)
+
+		if err != nil {
+			ga.App.ErrorLogger.Println("There is some problem in creating shipment : ", err)
+			_ = ctx.AbortWithError(http.StatusInternalServerError, gin.Error{Err: err})
+		}
+
+		if shipment_details == nil {
+			ga.App.ErrorLogger.Println("There is some problem in creating shipment : ", err)
+			_ = ctx.AbortWithError(http.StatusInternalServerError, gin.Error{Err: err})
+		}
+
+		ctx.JSON(http.StatusOK, gin.H{"message": "Shipment created successfully", "data": shipment_details})
 	}
 }
