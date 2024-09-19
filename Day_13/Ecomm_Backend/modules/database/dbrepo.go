@@ -34,4 +34,8 @@ type DBRepo interface {
 	RemoveFromCart(userID primitive.ObjectID, productID primitive.ObjectID) (bool, error)
 	GetAllUsers() ([]primitive.M, error)
 	InitializeUser(userId primitive.ObjectID) (bool, error)
+	CreateOrder(order *model.Order) (bool, error)
+	FindUserIDWithName(name string) (primitive.ObjectID, error)
+	GetAllOrders() ([]primitive.M, error)
+	DeleteProduct(id primitive.ObjectID) (bool, error)
 }

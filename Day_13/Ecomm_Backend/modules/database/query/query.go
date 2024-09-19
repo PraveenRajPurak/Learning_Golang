@@ -444,17 +444,19 @@ func (g *GoAppDB) UpdateProduct(product *model.Product) (bool, error) {
 		{Key: "$set", Value: bson.D{
 			{Key: "name", Value: product.Name},
 			{Key: "description", Value: product.Description},
+			{Key: "description.dimension", Value: product.Description.Dimension},
+			
 			{Key: "category", Value: product.Category},
 			{Key: "company_name", Value: product.Company_Name},
 			{Key: "model_name", Value: product.Model_Name},
-			{Key: "regular_price", Value: product.RegularPrice},
-			{Key: "sale_price", Value: product.SalePrice},
-			{Key: "sale_starts", Value: product.SaleStarts},
-			{Key: "sale_ends", Value: product.SaleEnds},
-			{Key: "in_stock", Value: product.InStock},
-			{Key: "SKU", Value: product.SKU},
-			{Key: "created_at", Value: product.CreatedAt},
-			{Key: "updated_at", Value: time.Now()},
+			{Key: "regularprice", Value: product.RegularPrice},
+			{Key: "saleprice", Value: product.SalePrice},
+			{Key: "salestarts", Value: product.SaleStarts},
+			{Key: "saleends", Value: product.SaleEnds},
+			{Key: "instock", Value: product.InStock},
+			{Key: "sku", Value: product.SKU},
+			{Key: "createdat", Value: product.CreatedAt},
+			{Key: "updatedat", Value: time.Now()},
 		}},
 		{Key: "$push", Value: bson.D{
 			{Key: "images", Value: bson.D{
@@ -648,4 +650,91 @@ func (g *GoAppDB) InitializeUser(userId primitive.ObjectID) (bool, error) {
 
 	return true, nil
 
+}
+
+func (g *GoAppDB) CreateOrder(order *model.Order) (bool, error) {
+
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Second)
+	defer cancel()
+
+	order.ID = primitive.NewObjectID()
+
+	_, err := User(g.DB, "orders").InsertOne(ctx, order)
+	if err != nil {
+		g.App.ErrorLogger.Fatalf("cannot insert order in the database : %v ", err)
+		return false, err
+	}
+
+	filter := bson.D{{Key: "_id", Value: order.CustomerID}}
+
+	update := bson.D{{Key: "$push", Value: bson.D{{Key: "orders", Value: order.ID}}}}
+
+	updatedetails, err := User(g.DB, "user").UpdateOne(ctx, filter, update)
+
+	if err != nil {
+		g.App.ErrorLogger.Fatalf("cannot execute the database query perfectly : %v ", err)
+		return false, err
+	}
+
+	g.App.InfoLogger.Printf("Matched %v documents and updated %v documents.\n", updatedetails.MatchedCount, updatedetails.ModifiedCount)
+
+	return true, nil
+}
+
+func (ga *GoAppDB) FindUserIDWithName(name string) (primitive.ObjectID, error) {
+
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Second)
+	defer cancel()
+
+	var res primitive.M
+
+	filter := bson.D{{Key: "name", Value: name}}
+
+	err := User(ga.DB, "user").FindOne(ctx, filter).Decode(&res)
+
+	if err != nil {
+		ga.App.ErrorLogger.Fatalf("cannot execute the database query perfectly : %v ", err)
+		return primitive.NilObjectID, err
+	}
+
+	return res["_id"].(primitive.ObjectID), nil
+
+}
+
+func (ga *GoAppDB) GetAllOrders() ([]primitive.M, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Second)
+	defer cancel()
+
+	var res []primitive.M
+
+	cursor, err := User(ga.DB, "orders").Find(ctx, bson.D{})
+
+	if err != nil {
+		ga.App.ErrorLogger.Fatalf("cannot execute the database query perfectly : %v ", err)
+		return nil, err
+	}
+
+	if err = cursor.All(ctx, &res); err != nil {
+		ga.App.ErrorLogger.Fatalf("cannot execute the database query perfectly. There is some problem in cursor : %v ", err)
+		return nil, err
+	}
+
+	return res, nil
+}
+
+func (ga *GoAppDB) DeleteProduct(id primitive.ObjectID) (bool, error) {
+
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Second)
+	defer cancel()
+
+	filter := bson.D{{Key: "_id", Value: id}}
+
+	_, err := Product(ga.DB, "product").DeleteOne(ctx, filter)
+
+	if err != nil {
+		ga.App.ErrorLogger.Fatalf("cannot execute the database query perfectly : %v ", err)
+		return false, err
+	}
+
+	return true, nil
 }

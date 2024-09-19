@@ -78,14 +78,18 @@ type Product struct {
 	UpdatedAt    time.Time          `json:"updated_At"`
 }
 
-type OrderItems struct {
+type OrderItem struct {
 	ProductID primitive.ObjectID `json:"product_id"`
 	Quantity  int                `json:"quantity"`
 }
 
+type OrderItems struct {
+	OrderItems []OrderItem `json:"order_items"`
+}
+
 type Order struct {
 	ID            primitive.ObjectID `json:"_id" bson:"_id"`
-	OrderItems    []OrderItems       `json:"order_items" bson:"order_items"`
+	OrderItems    OrderItems         `json:"order_items" bson:"order_items"`
 	OrderAmount   int                `json:"order_amount" bson:"order_amount"`
 	OrderDate     time.Time          `json:"order_date" bson:"order_date"`
 	TransactionID string             `json:"transaction_id" bson:"transaction_id"`
